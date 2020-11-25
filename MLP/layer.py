@@ -1,6 +1,7 @@
 import numpy as np
 from MLP.neuron import Neuron
 
+
 class Layer:
     """
     A hidden layer in the multilayer perceptron
@@ -9,7 +10,7 @@ class Layer:
     def __init__(self, n_in, n, afcn):
         self.n = n
         # Weights from input nodes to layer nodes
-        self.neurons = [Neuron(n_in, afcn)] * n
+        self.weights = np.random.normal(0.0, np.sqrt(2 / (n_in + n)), (n_in, n))
         # Node biases
         self.biases = np.zeros(n)
 
@@ -17,8 +18,7 @@ class Layer:
         """
         Compute outputs of all neurons in layer
         """
-        return [n.activate(inputs) for n in self.neurons]
+        return np.dot(inputs, self.weights) + self.biases
 
     def back_prop(self, loss):
         pass
-
