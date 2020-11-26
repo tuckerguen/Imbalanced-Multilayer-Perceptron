@@ -16,11 +16,12 @@ def gen_data(N, ratio):
     xpos, ypos = rnd.default_rng().multivariate_normal([-1, -1], cov, num_pos).T
     xneg, yneg = rnd.default_rng().multivariate_normal([1, 1], cov, num_neg).T
 
-    positives = np.concatenate(([xpos], [ypos], [np.ones(num_pos)])).T
-    negatives = np.concatenate(([xneg], [yneg], [np.ones(num_neg)*-1])).T
+    # positives = np.concatenate(([xpos], [ypos], [np.ones(num_pos)])).T
+    # negatives = np.concatenate(([xneg], [yneg], [np.ones(num_neg)*-1])).T
+    positives = np.concatenate(([xpos], [ypos])).T
+    negatives = np.concatenate(([xneg], [yneg])).T
     dataset = np.concatenate((positives, negatives))
-    print(dataset.shape)
-    return dataset
+    return positives, negatives, dataset
 
 
 def plot_dataset(dataset):

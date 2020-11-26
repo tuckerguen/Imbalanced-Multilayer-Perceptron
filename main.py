@@ -1,20 +1,27 @@
 from data_help.data_help import *
 from MLP.mlp import MLP
-from MLP.layer import Layer
 import time
 
-def print_hi(name):
+
+def run():
     num_samples = 1000
     # ratio:1 positive to negative class ratio
     ratio = 19
-    dataset = gen_data(num_samples, ratio)
-    # plot_dataset(dataset)
-    mlp = MLP(2, 3, np.tanh)
+    T1, T2, T = gen_data(num_samples, ratio)
+    # plot_dataset(T)
+    mlp = MLP(2, 3, 0.5, np.tanh)
+    mlp.train(T1, T2)
     start_time = time.time()
-    prediction = mlp.predict([0.1, 0.4])
     print("--- %s seconds ---" % (time.time() - start_time))
-    print(prediction)
+    p1 = [mlp.predict(ex) for ex in T1]
+    print(p1)
+    print("Num wrong: ", len([p for p in p1 if p < 0]), "/", len(T1))
+    p2 = [mlp.predict(ex) for ex in T2]
+    print(p2)
+    print("Num wrong: ", len([p for p in p2 if p > 0]), "/", len(T2))
+
+
 
 
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    run()
