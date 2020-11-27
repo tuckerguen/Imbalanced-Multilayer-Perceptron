@@ -38,5 +38,3 @@ class Layer:
             self.ex_sums = np.vstack((self.ex_sums, sums))
         return self.afcn(sums + self.biases)
 
-    # def back_prop(self, e1, e2, mu):
-

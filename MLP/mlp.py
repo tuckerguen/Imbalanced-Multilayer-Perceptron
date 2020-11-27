@@ -1,5 +1,6 @@
 import numpy as np
 from MLP.layer import Layer
+import matplotlib.pyplot as plt
 
 
 def i2h_deriv(nj, xji, dl, wo, xo):
@@ -79,8 +80,8 @@ class MLP:
         e2 = self.err(T2, -1)
 
         Jnew = self.loss(e1, e2)
-        eps = 1e-6
-        max_iters = 25000
+        eps = 1e-4
+        max_iters = 500
         iters = 0
 
         # Main optimization loop
@@ -96,7 +97,7 @@ class MLP:
                 Jnew = self.loss(e1, e2)
                 print(Jnew)
                 # If loss decreased
-                if Jnew < Jprev:
+                if Jnew < Jprev and Jnew != Jprev:
                     # update mu
                     mu /= beta
                 # If loss increased
@@ -118,8 +119,8 @@ class MLP:
             g = self.grad(Z1o, e1, Z2o, e2)
             # Compute and apply weight update
             deltaw = np.dot(np.linalg.inv(np.add(H, (mu * np.identity(self.h)))), g)
-            self.output.weights = self.output.weights - deltaw
-                
+            self.output.weights = self.output.weights + deltaw
+
             """update input-hidden weights"""
             # Compute jacobian for hidden-output weights
             h2o_weights = self.output.weights.ravel()
@@ -127,17 +128,17 @@ class MLP:
             prev_sums_h = self.hidden.ex_sums
 
             Z1h = np.array([[i2h_deriv(prev_sums_h[x][h], prev_inputs_h[x][i], Z1o[x][h], h2o_weights[h], prev_inputs[x][h])
-                       for i in range(self.n) for h in range(self.h)] for x in range(len(T1))])
+                                for i in range(self.n) for h in range(self.h)] for x in range(len(T1))])
             Z2h = np.array([[i2h_deriv(prev_sums_h[i][h], prev_inputs_h[x][i], Z2o[x-len(T1)][h], h2o_weights[h], prev_inputs[x][h])
-                       for i in range(self.n) for h in range(self.h)] for x in range(len(T1), len(T1)+len(T2))])
+                                for i in range(self.n) for h in range(self.h)] for x in range(len(T1), len(T1)+len(T2))])
             # Compute hessian approximation
             H = self.Hess(Z1h, Z2h)
             # Compute gradient vector approximation
             g = self.grad(Z1h, e1, Z2h, e2)
             # Apply weight update
             deltaw = np.dot(np.linalg.inv(np.add(H, (mu * np.identity(self.n * self.h)))), g)
-            deltaw = deltaw.reshape(2, 3)
-            self.hidden.weights = self.hidden.weights - deltaw
+            deltaw = deltaw.reshape(self.n, self.h)
+            self.hidden.weights = self.hidden.weights + deltaw
 
             # Reset stored sums and inputs
             self.output.ex_inputs = self.output.ex_sums = None
@@ -145,17 +146,18 @@ class MLP:
 
             iters += 1
 
+        if iters == max_iters:
+            print("Did not converge")
 
-"""
-Section for the modified levenberg-marquadt learning rule
-"""
-# def Z(T1, w):
-#
-#
-# def H(w, T1, T2):
-#     Zt1 = Z(T1, w)
-#     Zt2 = Z(T2, w)
-#     return _lambda * np.dot(np.transpose(Zt1), Zt1) + (1 - _lambda) * np.dot(np.transpose(Zt2), Zt2)
-#
-# def wnew(wold, mu):
-#     return wold - np.linalg.inv((H(wold) + mu * np.identity())) * g(wold)
+    def plot_decision_boundary(self):
+        print("Plotting decision boundary")
+        x = np.linspace(-5, 5, 200)
+        y = np.linspace(-5, 5, 200)
+        X, Y = np.meshgrid(x, y)
+        Z = np.zeros((200, 200))
+
+        for idx, i in enumerate(x):
+            for idy, j in enumerate(y):
+                Z[idx][idy] = self.predict([i, j]) > 0
+
+        plt.pcolormesh(X, Y, Z)
