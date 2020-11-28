@@ -3,6 +3,7 @@ from data_help.mldata import *
 from bisect import bisect_left
 import random
 import datetime
+import math
 
 """
 Collection of operations to perform on example sets/lists of examples

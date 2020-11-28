@@ -6,7 +6,7 @@ from data_help.data_help import plot_dataset
 
 
 class MLP:
-    def __init__(self, n, h, _lambda, afcn):
+    def __init__(self, n, h, _lambda, afcn, mu, beta):
         """
         Creates a multilayer perceptron with a single hidden layer
         and one output node, using a weighted sum loss function
@@ -17,6 +17,8 @@ class MLP:
         """
         self.n = n
         self.h = h
+        self.mu = mu
+        self.beta = beta
         self.hidden = Layer(n, h, afcn)
         self.output = Layer(h, 1, afcn)
         self._lambda = _lambda
@@ -54,8 +56,8 @@ class MLP:
         :param T2: List of negative examples
         :return: None
         """
-        mu = 0.1
-        beta = 10
+        mu = self.mu
+        beta = self.beta
         Jprev = float('inf')
         e1 = self.err(T1, 1)
         e2 = self.err(T2, -1)
@@ -64,6 +66,10 @@ class MLP:
         eps = 1e-4
         max_iters = 500
         iters = 0
+
+        min_h_weights = self.hidden.weights
+        min_o_weights = self.output.weights
+        minJ= Jnew
 
         # Main optimization loop
         while abs(Jprev - Jnew) > eps and iters < max_iters:
@@ -79,6 +85,11 @@ class MLP:
                 Jprev = Jnew
                 Jnew = self.loss(e1, e2)
                 print(Jnew)
+                if Jnew < minJ:
+                    minJ = Jnew
+                    min_h_weights = self.hidden.weights
+                    min_o_weights = self.output.weights
+
                 # If loss decreased
                 if Jnew < Jprev and Jnew != Jprev:
                     # update mu
@@ -135,6 +146,10 @@ class MLP:
         if iters == max_iters:
             print("Did not converge")
 
+        self.hidden.weights = min_h_weights
+        self.output.weights = min_o_weights
+        print(minJ)
+
     def plot_decision_boundary(self):
         print("Plotting decision boundary")
         x = np.linspace(-5, 5, 200)
@@ -180,19 +195,20 @@ def eval_mlp(mlp, T, T1, T2, file_str):
     pred = np.append(pred1, pred2)
     act1 = [1] * len(T1)
     act2 = [-1] * len(T2)
-    act = [ex[-1] for ex in T]
+    act = np.append(act1, act2)
 
     maj_acc = accuracy(pred1, act1)
     min_acc = accuracy(pred2, act2)
     lambda_weight_acc = mlp.weightsum(accuracy(pred1, act1), accuracy(pred2, act2))
     overall_acc = accuracy(pred, act)
     w_acc = weighted_acc(pred, act)
-    # w_acc = 0
+    gmean = np.sqrt(maj_acc * min_acc)
     print("Majority class accuracy:", maj_acc)
     print("Minority class accuracy:", min_acc)
     print("Overall weighted accuracy", lambda_weight_acc)
     print("Overall accuracy", overall_acc)
     print("Weighted accuracy", w_acc)
+    print("Gmean accuracy", gmean)
 
     if T1.shape[1] == 2:
         mlp.plot_decision_boundary()
@@ -201,5 +217,5 @@ def eval_mlp(mlp, T, T1, T2, file_str):
                   f"{w_acc:.3f}")
         plt.show()
 
-    accuracies = np.array([maj_acc, min_acc, lambda_weight_acc, overall_acc, w_acc])
-    np.savetxt(f"accuracies/accuracies_{file_str}", accuracies.reshape(5,))
+    accuracies = np.array([maj_acc, min_acc, lambda_weight_acc, overall_acc, w_acc, gmean])
+    np.savetxt(f"accuracies/accuracies_{file_str}", accuracies.reshape(len(accuracies),))

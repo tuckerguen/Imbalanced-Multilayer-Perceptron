@@ -42,12 +42,12 @@ def run():
     mlp = MLP(shape[1], 3, _lambda, np.tanh)
 
     if old_weights:
-        mlp.hidden = np.load(f"weights/hiddenw_{file_base}")
-        mlp.output = np.load(f"weights/outputw_{file_base}")
+        mlp.hidden.weights = np.load(f"weights/hiddenw_{file_base}")
+        mlp.output.weights = np.load(f"weights/outputw_{file_base}")
     else:
         mlp.train(T1, T2)
-        np.save(f"weights/hiddenw_{file_base}", mlp.hidden)
-        np.save(f"weights/outputw_{file_base}", mlp.output)
+        np.save(f"weights/hiddenw_{file_base}", mlp.hidden.weights)
+        np.save(f"weights/outputw_{file_base}", mlp.output.weights)
 
     eval_mlp(mlp, T, T1, T2, file_base)
 

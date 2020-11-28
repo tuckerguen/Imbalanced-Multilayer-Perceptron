@@ -15,8 +15,8 @@ def dataset_load(name):
     return T, T1, T2
 
 
-def make_file_str(name, _lambda):
-    return f"{name}_{_lambda:.3f}"
+def make_file_str(name, _lambda, h):
+    return f"{name}_{_lambda:.3f}_{h}"
 
 
 def run():
@@ -32,16 +32,20 @@ def run():
     else:
         _lambda = 0.5
 
-    file_base = make_file_str(name, _lambda)
-
-    mlp = MLP(shape[1], 3, _lambda, np.tanh)
+    # for h in range(3, 27, 3):
+    h = 18
+    mlp = MLP(shape[1], h, _lambda, np.tanh, 0.1, 5)
+    file_base = make_file_str(name, _lambda, h)
 
     if old_weights:
-        mlp.hidden = np.load(f"weights/hiddenw_{file_base}")
-        mlp.output = np.load(f"weights/outputw_{file_base}")
+        mlp.hidden.weights = np.load(f"weights/hiddenw_{file_base}.npy")
+        mlp.output.weights = np.load(f"weights/outputw_{file_base}.npy")
     else:
         mlp.train(T1, T2)
-
+        np.save(f"weights/hiddenw_{file_base}", mlp.hidden.weights)
+        np.save(f"weights/outputw_{file_base}", mlp.output.weights)
+    print("-"*50)
+    print(f"Accuracy for {h} hidden units")
     eval_mlp(mlp, T, T1, T2, file_base)
 
 
