@@ -1,8 +1,9 @@
 import numpy as np
-from MLP.layer import Layer
+from mlp.layer import Layer
 import matplotlib.pyplot as plt
 from data_help.exset_ops import get_data, weighted_acc, accuracy
 from data_help.data_help import plot_dataset
+from sklearn.metrics import roc_auc_score
 
 
 class MLP:
@@ -23,19 +24,26 @@ class MLP:
         self.output = Layer(h, 1, afcn)
         self._lambda = _lambda
 
+    def randomize_weights(self):
+        self.hidden.randomize_weights()
+        self.output.randomize_weights()
+
+    def classify(self, x):
+        return 1 if self.predict(x) > 0 else 0
+
+    def confidence(self, x):
+        return (self.predict(x) + 1) / 2.0
+
     def predict(self, x):
         """
         Prediction output of multilayer perceptron
         :param x: example to predict class of
         :return: value in (-1, 1)
         """
-        out = self.output.feed_forward(self.hidden.feed_forward(x))
-        return out
+        return self.output.feed_forward(self.hidden.feed_forward(x))
 
     def err(self, T, y):
-        a = np.subtract(y, np.array([self.predict(x) for x in T]))
-        # print(np.abs(np.mean(a)))
-        return a
+        return np.subtract(y, np.array([self.predict(x) for x in T]))
 
     def weightsum(self, x1, x2):
         return self._lambda * x1 + (1 - self._lambda) * x2
@@ -69,12 +77,17 @@ class MLP:
 
         min_h_weights = self.hidden.weights
         min_o_weights = self.output.weights
-        minJ= Jnew
+        minJ = Jnew
+
+        xs = []
+        loss_values = []
 
         # Main optimization loop
         while abs(Jprev - Jnew) > eps and iters < max_iters:
             # Perform levenberg marquardt optimization of the weights
             # Skip mu update for first iteration
+            loss_values.append(Jnew)
+            xs.append(iters)
             if not iters == 0:
                 # Compute error vectors
                 # print("Maj class err")
@@ -84,6 +97,7 @@ class MLP:
                 # Compute the loss for current weights
                 Jprev = Jnew
                 Jnew = self.loss(e1, e2)
+
                 print(Jnew)
                 if Jnew < minJ:
                     minJ = Jnew
@@ -146,9 +160,11 @@ class MLP:
         if iters == max_iters:
             print("Did not converge")
 
-        self.hidden.weights = min_h_weights
-        self.output.weights = min_o_weights
-        print(minJ)
+        # self.hidden.weights = min_h_weights
+        # self.output.weights = min_o_weights
+        print("Min loss:", minJ)
+
+        return xs, loss_values
 
     def plot_decision_boundary(self):
         print("Plotting decision boundary")
@@ -189,7 +205,7 @@ def h2o_deriv(nj, xji):
     return (1 - np.tanh(nj) ** 2) * xji
 
 
-def eval_mlp(mlp, T, T1, T2, file_str):
+def eval_mlp(mlp, T, T1, T2):
     pred1 = [-1 if mlp.predict(ex) < 0 else 1 for ex in T1]
     pred2 = [-1 if mlp.predict(ex) < 0 else 1 for ex in T2]
     pred = np.append(pred1, pred2)
@@ -203,19 +219,14 @@ def eval_mlp(mlp, T, T1, T2, file_str):
     overall_acc = accuracy(pred, act)
     w_acc = weighted_acc(pred, act)
     gmean = np.sqrt(maj_acc * min_acc)
-    print("Majority class accuracy:", maj_acc)
-    print("Minority class accuracy:", min_acc)
-    print("Overall weighted accuracy", lambda_weight_acc)
-    print("Overall accuracy", overall_acc)
-    print("Weighted accuracy", w_acc)
-    print("Gmean accuracy", gmean)
 
-    if T1.shape[1] == 2:
-        mlp.plot_decision_boundary()
-        plot_dataset(T)
-        plt.title(f"{file_str} | {maj_acc:.3f}, {min_acc:.3f}, {lambda_weight_acc:.3f}, {overall_acc:.3f},"
-                  f"{w_acc:.3f}")
-        plt.show()
+    return np.array([maj_acc, min_acc, lambda_weight_acc, overall_acc, w_acc, gmean])
 
-    accuracies = np.array([maj_acc, min_acc, lambda_weight_acc, overall_acc, w_acc, gmean])
-    np.savetxt(f"accuracies/accuracies_{file_str}", accuracies.reshape(len(accuracies),))
+
+def print_accs(acc):
+    print("Majority class accuracy:", acc[0])
+    print("Minority class accuracy:", acc[1])
+    print("Overall weighted accuracy", acc[2])
+    print("Overall accuracy", acc[3])
+    print("Weighted accuracy", acc[4])
+    print("Gmean accuracy", acc[5])

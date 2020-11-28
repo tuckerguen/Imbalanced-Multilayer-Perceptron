@@ -1,5 +1,5 @@
 from data_help.data_help import *
-from MLP.mlp import MLP, eval_mlp
+from mlp.mlp import MLP, eval_mlp
 import sys
 
 
@@ -48,6 +48,7 @@ def run():
         mlp.train(T1, T2)
         np.save(f"weights/hiddenw_{file_base}", mlp.hidden.weights)
         np.save(f"weights/outputw_{file_base}", mlp.output.weights)
+
 
     eval_mlp(mlp, T, T1, T2, file_base)
 

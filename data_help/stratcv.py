@@ -1,11 +1,11 @@
 import random
-from mldata import ExampleSet, Schema
+from data_help.mldata import ExampleSet, Schema
 from classifiers.confclassifier import ConfClassifier
 import numpy as np
 from scipy import stats
 
 
-def make_folds(example_set):
+def make_folds(example_set, k):
     """
     Given an example set generate 5 random folds with even distributions of class labels
     :param example_set: Example set to create folds from

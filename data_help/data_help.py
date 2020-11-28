@@ -46,3 +46,9 @@ def correct_labels(x):
             ex[-1] = -1
         else:
             ex[-1] = 1
+
+
+def gen_Tk(T):
+    T1 = np.array([ex[:-1] for ex in T if ex[-1] == -1])
+    T2 = np.array([ex[:-1] for ex in T if ex[-1] == 1])
+    return T1, T2

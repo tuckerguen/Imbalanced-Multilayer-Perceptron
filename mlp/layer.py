@@ -1,5 +1,5 @@
 import numpy as np
-from MLP.neuron import Neuron
+from mlp.neuron import Neuron
 
 
 class Layer:
@@ -8,9 +8,11 @@ class Layer:
     """
 
     def __init__(self, n_in, n_out, afcn):
-        self.n = n_out
+        self.n_out = n_out
+        self.n_in = n_in
         # Weights from input nodes to layer nodes
         self.weights = np.random.normal(0.0, np.sqrt(2 / (n_in + n_out)), (n_in, n_out))
+        # self.weights = np.ones((n_in, n_out)) * 0.0001
         if self.weights.shape[1] == 1:
             self.weights = self.weights.flatten('C')
         # Node biases
@@ -21,6 +23,9 @@ class Layer:
         self.ex_inputs = None
         # The sum of all inputs to each node for each example over all examples
         self.ex_sums = None
+
+    def randomize_weights(self):
+        self.weights = np.random.normal(0.0, np.sqrt(2 / (self.n_in + self.n_out)), (self.n_in, self.n_out))
 
     def feed_forward(self, inputs):
         """
