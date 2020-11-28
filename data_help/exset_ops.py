@@ -110,6 +110,19 @@ def get_data(path):
     return parse_c45(file_base, root)
 
 
+def weighted_acc(pred, act):
+    TP = len([ex for i, ex in enumerate(pred) if ex == 1 and act[i] == 1])
+    TN = len([ex for i, ex in enumerate(pred) if ex == -1 and act[i] == -1])
+    FP = len([ex for i, ex in enumerate(pred) if ex == 1 and act[i] != 1])
+    FN = len([ex for i, ex in enumerate(pred) if ex == -1 and act[i] != -1])
+
+    if TP+FN == 0:
+        TP = 1e-6
+    if TN+FP == 0:
+        TN = 1e-6
+    return 0.5 * ((TP / (TP + FN)) + (TN / (TN + FP)))
+
+
 def accuracy(pred, act):
     """
     Compute accuracy given sets of predicted class labels and true class labels

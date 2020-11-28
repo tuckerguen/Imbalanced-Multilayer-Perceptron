@@ -11,6 +11,8 @@ class Layer:
         self.n = n_out
         # Weights from input nodes to layer nodes
         self.weights = np.random.normal(0.0, np.sqrt(2 / (n_in + n_out)), (n_in, n_out))
+        if self.weights.shape[1] == 1:
+            self.weights = self.weights.flatten('C')
         # Node biases
         self.biases = np.zeros(n_out)
         # Activation function

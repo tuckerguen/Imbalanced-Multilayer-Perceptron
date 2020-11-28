@@ -3,24 +3,28 @@ import numpy.random as rnd
 import matplotlib.pyplot as plt
 
 
-def gen_data(N, ratio):
+def gen_data(N, num_attr, ratio):
     """
     Generates an Nx3 dataset of (x,y,label=0,1) points sampled
     from a normal distribution with positive class mean = (-1,-1)
     and negative class mean = (1,1), with 2x2 covariance matrix
     with diagonals = 1.5
     """
-    cov = np.array([[1, 0], [0, 1]])
+    cov = np.identity(num_attr)
     num_pos = int(ratio * (N / (ratio + 1)))
     num_neg = int(N / (ratio + 1))
-    xpos, ypos = rnd.default_rng().multivariate_normal([-1, -1], cov, num_pos).T
-    xneg, yneg = rnd.default_rng().multivariate_normal([1, 1], cov, num_neg).T
+    allpos = rnd.default_rng().multivariate_normal([-1] * num_attr, cov, num_pos).T
+    allneg = rnd.default_rng().multivariate_normal([1] * num_attr, cov, num_neg).T
 
-    positives = np.concatenate(([xpos], [ypos])).T
-    negatives = np.concatenate(([xneg], [yneg])).T
-    dataset = np.concatenate((np.concatenate(([xpos], [ypos], [np.ones(num_pos)])).T,
-                              np.concatenate(([xneg], [yneg], [np.ones(num_neg) * -1])).T))
-    return positives, negatives, dataset
+    # positives = np.concatenate(([xpos], [ypos])).T
+    # negatives = np.concatenate(([xneg], [yneg])).T
+    # dataset = np.concatenate((np.concatenate(([xpos], [ypos], [np.ones(num_pos)])).T,
+    #                           np.concatenate(([xneg], [yneg], [np.ones(num_neg) * -1])).T))
+    positives = allpos.T
+    negatives = allneg.T
+    dataset = np.concatenate((np.concatenate((allpos, [np.ones(num_pos)])).T,
+                              np.concatenate((allneg, [np.ones(num_neg) * -1])).T))
+    return dataset, positives, negatives
 
 
 def plot_dataset(dataset):
@@ -34,6 +38,7 @@ def plot_dataset(dataset):
 
 def normalize(x):
     return (x - x.min(0)) / x.ptp(0)
+
 
 def correct_labels(x):
     for ex in x:

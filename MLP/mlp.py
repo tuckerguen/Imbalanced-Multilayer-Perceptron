@@ -1,30 +1,8 @@
 import numpy as np
 from MLP.layer import Layer
 import matplotlib.pyplot as plt
-
-
-def i2h_deriv(nj, xji, dl, wo, xo):
-    """
-    dL/dwji (derivative of the loss w.r.t an
-    edge) from an input node to a hidden node
-    :param nj: Sum of input to hidden node
-    :param dl: Derivative along edge from hidden to output
-    :param wo: Weight along edge from hidden to output
-    :param xo: Value along edge from hidden to output
-    :return:
-    """
-    return (1 - np.tanh(nj) ** 2) * xji * dl * (wo / xo)
-
-
-def h2o_deriv(nj, xji):
-    """
-    dL/dwji (derivative of the loss w.r.t an
-    edge) from a hidden node to the output node
-    :param nj: The sum of the inputs to the output node
-    :param xji: The input along this edge
-    :return: Derivative value
-    """
-    return (1 - np.tanh(nj) ** 2) * xji
+from data_help.exset_ops import get_data, weighted_acc, accuracy
+from data_help.data_help import plot_dataset
 
 
 class MLP:
@@ -49,10 +27,13 @@ class MLP:
         :param x: example to predict class of
         :return: value in (-1, 1)
         """
-        return self.output.feed_forward(self.hidden.feed_forward(x))
+        out = self.output.feed_forward(self.hidden.feed_forward(x))
+        return out
 
     def err(self, T, y):
-        return y - np.array([self.predict(x) for x in T])
+        a = np.subtract(y, np.array([self.predict(x) for x in T]))
+        # print(np.abs(np.mean(a)))
+        return a
 
     def weightsum(self, x1, x2):
         return self._lambda * x1 + (1 - self._lambda) * x2
@@ -90,7 +71,9 @@ class MLP:
             # Skip mu update for first iteration
             if not iters == 0:
                 # Compute error vectors
+                # print("Maj class err")
                 e1 = self.err(T1, 1)
+                # print("Min class err")
                 e2 = self.err(T2, -1)
                 # Compute the loss for current weights
                 Jprev = Jnew
@@ -112,14 +95,15 @@ class MLP:
             Z1o = np.array([[h2o_deriv(prev_sums[i][0], prev_inputs[i][j]) for j in range(self.h)]
                             for i in range(len(T1))])
             Z2o = np.array([[h2o_deriv(prev_sums[i][0], prev_inputs[i][j]) for j in range(self.h)]
-                            for i in range(len(T1), len(T1)+len(T2))])
+                            for i in range(len(T1), len(T1) + len(T2))])
             # Compute hessian approximation
             H = self.Hess(Z1o, Z2o)
             # Compute gradient vector approximation
             g = self.grad(Z1o, e1, Z2o, e2)
             # Compute and apply weight update
             deltaw = np.dot(np.linalg.inv(np.add(H, (mu * np.identity(self.h)))), g)
-            self.output.weights = self.output.weights + deltaw
+            deltaw = deltaw.flatten('C')
+            self.output.weights = np.add(self.output.weights, deltaw)
 
             """update input-hidden weights"""
             # Compute jacobian for hidden-output weights
@@ -127,10 +111,12 @@ class MLP:
             prev_inputs_h = self.hidden.ex_inputs
             prev_sums_h = self.hidden.ex_sums
 
-            Z1h = np.array([[i2h_deriv(prev_sums_h[x][h], prev_inputs_h[x][i], Z1o[x][h], h2o_weights[h], prev_inputs[x][h])
-                                for i in range(self.n) for h in range(self.h)] for x in range(len(T1))])
-            Z2h = np.array([[i2h_deriv(prev_sums_h[i][h], prev_inputs_h[x][i], Z2o[x-len(T1)][h], h2o_weights[h], prev_inputs[x][h])
-                                for i in range(self.n) for h in range(self.h)] for x in range(len(T1), len(T1)+len(T2))])
+            Z1h = np.array(
+                [[i2h_deriv(prev_sums_h[x][h], prev_inputs_h[x][i], Z1o[x][h], h2o_weights[h], prev_inputs[x][h])
+                  for i in range(self.n) for h in range(self.h)] for x in range(len(T1))])
+            Z2h = np.array([[i2h_deriv(prev_sums_h[i][h], prev_inputs_h[x][i], Z2o[x - len(T1)][h], h2o_weights[h],
+                                       prev_inputs[x][h])
+                             for i in range(self.n) for h in range(self.h)] for x in range(len(T1), len(T1) + len(T2))])
             # Compute hessian approximation
             H = self.Hess(Z1h, Z2h)
             # Compute gradient vector approximation
@@ -138,7 +124,7 @@ class MLP:
             # Apply weight update
             deltaw = np.dot(np.linalg.inv(np.add(H, (mu * np.identity(self.n * self.h)))), g)
             deltaw = deltaw.reshape(self.n, self.h)
-            self.hidden.weights = self.hidden.weights + deltaw
+            self.hidden.weights = np.add(self.hidden.weights, deltaw)
 
             # Reset stored sums and inputs
             self.output.ex_inputs = self.output.ex_sums = None
@@ -161,3 +147,59 @@ class MLP:
                 Z[idx][idy] = self.predict([i, j]) > 0
 
         plt.pcolormesh(X, Y, Z)
+
+
+def i2h_deriv(nj, xji, dl, wo, xo):
+    """
+    dL/dwji (derivative of the loss w.r.t an
+    edge) from an input node to a hidden node
+    :param xji: input along edge from input to hidden node
+    :param nj: Sum of input to hidden node
+    :param dl: Derivative along edge from hidden to output
+    :param wo: Weight along edge from hidden to output
+    :param xo: Value along edge from hidden to output
+    :return:
+    """
+    return (1 - np.tanh(nj) ** 2) * xji * dl * (wo / xo)
+
+
+def h2o_deriv(nj, xji):
+    """
+    dL/dwji (derivative of the loss w.r.t an
+    edge) from a hidden node to the output node
+    :param nj: The sum of the inputs to the output node
+    :param xji: The input along this edge
+    :return: Derivative value
+    """
+    return (1 - np.tanh(nj) ** 2) * xji
+
+
+def eval_mlp(mlp, T, T1, T2, file_str):
+    pred1 = [-1 if mlp.predict(ex) < 0 else 1 for ex in T1]
+    pred2 = [-1 if mlp.predict(ex) < 0 else 1 for ex in T2]
+    pred = np.append(pred1, pred2)
+    act1 = [1] * len(T1)
+    act2 = [-1] * len(T2)
+    act = [ex[-1] for ex in T]
+
+    maj_acc = accuracy(pred1, act1)
+    min_acc = accuracy(pred2, act2)
+    lambda_weight_acc = mlp.weightsum(accuracy(pred1, act1), accuracy(pred2, act2))
+    overall_acc = accuracy(pred, act)
+    w_acc = weighted_acc(pred, act)
+    # w_acc = 0
+    print("Majority class accuracy:", maj_acc)
+    print("Minority class accuracy:", min_acc)
+    print("Overall weighted accuracy", lambda_weight_acc)
+    print("Overall accuracy", overall_acc)
+    print("Weighted accuracy", w_acc)
+
+    if T1.shape[1] == 2:
+        mlp.plot_decision_boundary()
+        plot_dataset(T)
+        plt.title(f"{file_str} | {maj_acc:.3f}, {min_acc:.3f}, {lambda_weight_acc:.3f}, {overall_acc:.3f},"
+                  f"{w_acc:.3f}")
+        plt.show()
+
+    accuracies = np.array([maj_acc, min_acc, lambda_weight_acc, overall_acc, w_acc])
+    np.savetxt(f"accuracies/accuracies_{file_str}", accuracies.reshape(5,))
