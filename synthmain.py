@@ -49,8 +49,7 @@ def run():
         np.save(f"weights/hiddenw_{file_base}", mlp.hidden.weights)
         np.save(f"weights/outputw_{file_base}", mlp.output.weights)
 
-
-    eval_mlp(mlp, T, T1, T2, file_base)
+    eval_mlp(mlp, T, T1, T2)
 
 
 def make_file_str(N, ratio, num_attr, _lambda):
@@ -59,54 +58,3 @@ def make_file_str(N, ratio, num_attr, _lambda):
 
 if __name__ == '__main__':
     run()
-
-# For lambda = 0.5, 10 hidden units
-# Num wrong:  12 / 647
-# Num wrong:  178 / 199
-
-# Not doin that well on the vehicle set. Not enough training examples?
-# Perhaps we can use the synthetic sampling technique not to increase
-# minority class proportions but instead to increase number of training
-# examples. Probably not this tho... Their performance is good on the same
-# dataset
-
-# 13 hidden nodes
-# compute sqrt(Tpr*TNr)
-
-# Synthetic dataset, ratio=10:1
-# 3 hidden, lambda=0.5
-# Majority class accuracy: 0.9306930693069307
-# Minority class accuracy: 0.9111111111111111
-# Overall accuracy 0.928928928928929
-
-# lambda=0.09
-# Majority class accuracy: 0.8921892189218922
-# Minority class accuracy: 0.8666666666666667
-# Overall accuracy 0.8898898898898899
-
-# Ratio 19:1
-# lambda = 1/19
-# Majority class accuracy: 0.9284210526315789
-# Minority class accuracy: 0.92
-# Overall accuracy 0.928
-
-# Ratio 19:1
-# lambda = 0.5
-# Majority class accuracy: 0.9263157894736842
-# Minority class accuracy: 0.94
-# Overall accuracy 0.927
-
-
-# GREAT EXAMPLE
-# Tk_19_618 dataset, 2 attr, 19:1 ratio
-# w/ lambda = 1/19
-# Majority class accuracy: 0.9126315789473685
-# Minority class accuracy: 1.0
-# Overall weighted accuracy 0.9956315789473684
-# Overall accuracy 0.917
-
-# w/ lambda = 0.5
-# Majority class accuracy: 0.9210526315789473
-# Minority class accuracy: 0.98
-# Overall weighted accuracy 0.9505263157894737
-# Overall accuracy 0.924

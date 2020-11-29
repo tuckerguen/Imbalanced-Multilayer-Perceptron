@@ -1,9 +1,8 @@
 import numpy as np
 from mlp.layer import Layer
 import matplotlib.pyplot as plt
-from data_help.exset_ops import get_data, weighted_acc, accuracy
-from data_help.data_help import plot_dataset
-from sklearn.metrics import roc_auc_score
+from data_help.exset_ops import weighted_acc, accuracy
+from _heapq import heappush, heappop
 
 
 class MLP:
@@ -57,15 +56,50 @@ class MLP:
     def grad(self, Z1, e1, Z2, e2):
         return self.weightsum(np.dot(np.transpose(Z1), e1), np.dot(np.transpose(Z2), e2))
 
-    def train(self, T1, T2):
+    def train(self, T1, T2, repeat):
         """
         Train the MLP on training examples
+        :param repeat: Use repeating convergence method
         :param T1: List of positive examples
         :param T2: List of negative examples
         :return: None
         """
         mu = self.mu
         beta = self.beta
+
+        mins0, x0s, l0s = self.LM_optimize_weights(mu, beta, T1, T2)
+
+        if not repeat:
+            return x0s, l0s
+        else:
+            losses = []
+            heappush(losses, (mins0, x0s, l0s))
+
+            loss_values = np.array(l0s).reshape(len(x0s), )
+            plt.plot(x0s, loss_values)
+            plt.title(f"mu={mu}, beta={beta}")
+            plt.show()
+
+            # Repeat optimization for minima
+            for i, weights in enumerate(mins0):
+                print(f"Re-optimizing from loss at {weights[0][0][0]:.3f}")
+                self.hidden.weights = weights[1]
+                self.output.weights = weights[2]
+                mins, x1s, l1s = self.LM_optimize_weights(0.001, 3, T1, T2)
+
+                loss_values1 = np.array(l1s).reshape(len(x1s),)
+                plt.plot(x1s, loss_values1)
+                plt.title(f"it={i}, mu={0.001}, beta={beta}")
+                plt.show()
+
+                heappush(losses, (mins, x1s, l1s))
+
+            best = losses[len(losses)-1]
+            self.hidden.weights = best[0][0][1]
+            self.output.weights = best[0][0][2]
+            return best[1], best[2]
+
+    def LM_optimize_weights(self, mu, beta, T1, T2):
         Jprev = float('inf')
         e1 = self.err(T1, 1)
         e2 = self.err(T2, -1)
@@ -75,12 +109,9 @@ class MLP:
         max_iters = 500
         iters = 0
 
-        min_h_weights = self.hidden.weights
-        min_o_weights = self.output.weights
-        minJ = Jnew
-
         xs = []
         loss_values = []
+        min_losses = []
 
         # Main optimization loop
         while abs(Jprev - Jnew) > eps and iters < max_iters:
@@ -99,10 +130,10 @@ class MLP:
                 Jnew = self.loss(e1, e2)
 
                 print(Jnew)
-                if Jnew < minJ:
-                    minJ = Jnew
-                    min_h_weights = self.hidden.weights
-                    min_o_weights = self.output.weights
+
+                heappush(min_losses, (-Jnew, self.hidden.weights, self.output.weights))
+                if len(min_losses) > 3:
+                    heappop(min_losses)
 
                 # If loss decreased
                 if Jnew < Jprev and Jnew != Jprev:
@@ -160,11 +191,7 @@ class MLP:
         if iters == max_iters:
             print("Did not converge")
 
-        # self.hidden.weights = min_h_weights
-        # self.output.weights = min_o_weights
-        print("Min loss:", minJ)
-
-        return xs, loss_values
+        return min_losses, xs, loss_values
 
     def plot_decision_boundary(self):
         print("Plotting decision boundary")

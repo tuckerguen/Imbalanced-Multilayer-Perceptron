@@ -16,10 +16,6 @@ def gen_data(N, num_attr, ratio):
     allpos = rnd.default_rng().multivariate_normal([-1] * num_attr, cov, num_pos).T
     allneg = rnd.default_rng().multivariate_normal([1] * num_attr, cov, num_neg).T
 
-    # positives = np.concatenate(([xpos], [ypos])).T
-    # negatives = np.concatenate(([xneg], [yneg])).T
-    # dataset = np.concatenate((np.concatenate(([xpos], [ypos], [np.ones(num_pos)])).T,
-    #                           np.concatenate(([xneg], [yneg], [np.ones(num_neg) * -1])).T))
     positives = allpos.T
     negatives = allneg.T
     dataset = np.concatenate((np.concatenate((allpos, [np.ones(num_pos)])).T,
@@ -49,6 +45,6 @@ def correct_labels(x):
 
 
 def gen_Tk(T):
-    T1 = np.array([ex[:-1] for ex in T if ex[-1] == -1])
-    T2 = np.array([ex[:-1] for ex in T if ex[-1] == 1])
+    T1 = np.array([ex[1:-1] for ex in T if ex[-1] == -1])
+    T2 = np.array([ex[1:-1] for ex in T if ex[-1] == 1])
     return T1, T2

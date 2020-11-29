@@ -40,12 +40,13 @@ def run():
     cv = bool(int(sys.argv[2]))
     comp_lambda = bool(int(sys.argv[3]))
     old_weights = bool(int(sys.argv[4]))
+    repeat = bool(int(sys.argv[5]))
 
     T = dataset_load(name)
 
     mu = 0.1
-    beta = 10
-    h = 3
+    beta = 5
+    h = 18
 
     # Do stratified cross validation
     if cv:
@@ -96,11 +97,6 @@ def run():
         else:
             _lambda = 0.5
 
-        # for h in range(3, 27, 3):
-        # for m in range(1, 10, 2):
-        #     mu = 1 / m
-        #     for beta in range(1, 20, 4):
-
         mlp = MLP(T1.shape[1], h, _lambda, np.tanh, mu, beta)
         file_base = make_file_str(name, _lambda, h)
 
@@ -108,7 +104,7 @@ def run():
             mlp.hidden.weights = np.load(f"weights/hiddenw_{file_base}.npy")
             mlp.output.weights = np.load(f"weights/outputw_{file_base}.npy")
         else:
-            xs, loss_values = mlp.train(T1, T2)
+            xs, loss_values = mlp.train(T1, T2, repeat)
             loss_values = np.array(loss_values).reshape(len(xs),)
             plt.plot(xs, loss_values)
             plt.title(f"mu={mlp.mu}, beta={mlp.beta}")
