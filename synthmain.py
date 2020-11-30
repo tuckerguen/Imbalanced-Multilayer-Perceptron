@@ -32,7 +32,7 @@ def run():
         T, T1, T2 = synth_gen_and_save(N, ratio, num_attr)
 
     if comp_lambda:
-        _lambda = len(T2) / len(T)
+        _lambda = len(T2) / len(T) / 2
     else:
         _lambda = 0.5
 
