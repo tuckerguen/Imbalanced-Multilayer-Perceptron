@@ -62,7 +62,7 @@ class MLP:
         :param repeat: Use repeating convergence method
         :param T1: List of positive examples
         :param T2: List of negative examples
-        :return: None
+        :return: list of x and loss values for plotting
         """
         mu = self.mu
         beta = self.beta
@@ -72,68 +72,97 @@ class MLP:
         if not repeat:
             return x0s, l0s
         else:
-            losses = []
-            heappush(losses, (mins0, x0s, l0s))
+            return self.repeat_optimization(mins0, x0s, l0s, T1, T2)
 
-            loss_values = np.array(l0s).reshape(len(x0s), )
-            plt.plot(x0s, loss_values)
-            plt.title(f"mu={mu}, beta={beta}")
+    def repeat_optimization(self, mins0, x0s, l0s, T1, T2):
+        """
+        Repeat LM optimization, with given initial weights
+        :param mins0: list of tuples with loss, hidden weights and output weights
+                      from original weight optimization
+        :param x0s: list of x values for plotting loss
+        :param l0s: list of loss values for plotting
+        :param T1: majority class example set
+        :param T2: minority class example set
+        :return: final optimized list of x values and loss values for plotting
+        """
+
+        losses = []
+        heappush(losses, (mins0, x0s, l0s))
+
+        loss_values = np.array(l0s).reshape(len(x0s), )
+        plt.plot(x0s, loss_values)
+        plt.title(f"mu={self.mu}, beta={self.beta}")
+        plt.show()
+
+        # Repeat optimization for minima
+        for i, weights in enumerate(mins0):
+            print(f"Re-optimizing from loss at {weights[0][0][0]:.3f}")
+            self.hidden.weights = weights[1]
+            self.output.weights = weights[2]
+            mins, x1s, l1s = self.LM_optimize_weights(0.001, 3, T1, T2)
+
+            loss_values1 = np.array(l1s).reshape(len(x1s), )
+            plt.plot(x1s, loss_values1)
+            plt.title(f"it={i}, mu={0.001}, beta={3}")
             plt.show()
 
-            # Repeat optimization for minima
-            for i, weights in enumerate(mins0):
-                print(f"Re-optimizing from loss at {weights[0][0][0]:.3f}")
-                self.hidden.weights = weights[1]
-                self.output.weights = weights[2]
-                mins, x1s, l1s = self.LM_optimize_weights(0.001, 3, T1, T2)
+            heappush(losses, (mins, x1s, l1s))
 
-                loss_values1 = np.array(l1s).reshape(len(x1s),)
-                plt.plot(x1s, loss_values1)
-                plt.title(f"it={i}, mu={0.001}, beta={beta}")
-                plt.show()
-
-                heappush(losses, (mins, x1s, l1s))
-
-            best = losses[len(losses)-1]
-            self.hidden.weights = best[0][0][1]
-            self.output.weights = best[0][0][2]
-            return best[1], best[2]
+        best = losses[len(losses) - 1]
+        self.hidden.weights = best[0][0][1]
+        self.output.weights = best[0][0][2]
+        return best[1], best[2]
 
     def LM_optimize_weights(self, mu, beta, T1, T2):
-        Jprev = float('inf')
-        e1 = self.err(T1, 1)
-        e2 = self.err(T2, -1)
+        """
+        Run modified Levenberg-Marquardt optimization on the MLP weights
+        :param mu: initial mu value
+        :param beta: initial beta value
+        :param T1: majority class example set
+        :param T2: minority class example set
+        :return: list of tuples of minimum visited losses and their weights,
+                 x and loss arrays for plotting
+        """
 
-        Jnew = self.loss(e1, e2)
+        # Define stopping conditions
         eps = 1e-4
         max_iters = 500
         iters = 0
 
+        # Initialize loss values
+        Jprev = float('inf')
+        e1 = self.err(T1, 1)
+        e2 = self.err(T2, -1)
+        Jnew = self.loss(e1, e2)
+
+        # Data tracking lists
         xs = []
         loss_values = []
-        min_losses = []
+        min_loss_and_weights = []
 
         # Main optimization loop
         while abs(Jprev - Jnew) > eps and iters < max_iters:
             # Perform levenberg marquardt optimization of the weights
-            # Skip mu update for first iteration
+
+            # Store current iteration loss and number
             loss_values.append(Jnew)
             xs.append(iters)
+
+            # Skip mu update for first iteration
             if not iters == 0:
                 # Compute error vectors
-                # print("Maj class err")
                 e1 = self.err(T1, 1)
-                # print("Min class err")
                 e2 = self.err(T2, -1)
                 # Compute the loss for current weights
                 Jprev = Jnew
                 Jnew = self.loss(e1, e2)
-
+                # Report current loss
                 print(Jnew)
 
-                heappush(min_losses, (-Jnew, self.hidden.weights, self.output.weights))
-                if len(min_losses) > 3:
-                    heappop(min_losses)
+                # Track top 3 minimum losses visited
+                heappush(min_loss_and_weights, (-Jnew, self.hidden.weights, self.output.weights))
+                if len(min_loss_and_weights) > 3:
+                    heappop(min_loss_and_weights)
 
                 # If loss decreased
                 if Jnew < Jprev and Jnew != Jprev:
@@ -143,44 +172,11 @@ class MLP:
                 else:
                     mu *= beta
 
-            """update hidden-output weights"""
-            # Compute jacobian for hidden-output weights
-            # Convert weights from 2d array to 1d
-            prev_inputs = self.output.ex_inputs
-            prev_sums = self.output.ex_sums
-            Z1o = np.array([[h2o_deriv(prev_sums[i][0], prev_inputs[i][j]) for j in range(self.h)]
-                            for i in range(len(T1))])
-            Z2o = np.array([[h2o_deriv(prev_sums[i][0], prev_inputs[i][j]) for j in range(self.h)]
-                            for i in range(len(T1), len(T1) + len(T2))])
-            # Compute hessian approximation
-            H = self.Hess(Z1o, Z2o)
-            # Compute gradient vector approximation
-            g = self.grad(Z1o, e1, Z2o, e2)
-            # Compute and apply weight update
-            deltaw = np.dot(np.linalg.inv(np.add(H, (mu * np.identity(self.h)))), g)
-            deltaw = deltaw.flatten('C')
-            self.output.weights = np.add(self.output.weights, deltaw)
+            # update hidden-output weights
+            Z1o, Z2o = self.update_output_weights(e1, e2, mu, len(T1), len(T2))
 
-            """update input-hidden weights"""
-            # Compute jacobian for hidden-output weights
-            h2o_weights = self.output.weights.ravel()
-            prev_inputs_h = self.hidden.ex_inputs
-            prev_sums_h = self.hidden.ex_sums
-
-            Z1h = np.array(
-                [[i2h_deriv(prev_sums_h[x][h], prev_inputs_h[x][i], Z1o[x][h], h2o_weights[h], prev_inputs[x][h])
-                  for i in range(self.n) for h in range(self.h)] for x in range(len(T1))])
-            Z2h = np.array([[i2h_deriv(prev_sums_h[i][h], prev_inputs_h[x][i], Z2o[x - len(T1)][h], h2o_weights[h],
-                                       prev_inputs[x][h])
-                             for i in range(self.n) for h in range(self.h)] for x in range(len(T1), len(T1) + len(T2))])
-            # Compute hessian approximation
-            H = self.Hess(Z1h, Z2h)
-            # Compute gradient vector approximation
-            g = self.grad(Z1h, e1, Z2h, e2)
-            # Apply weight update
-            deltaw = np.dot(np.linalg.inv(np.add(H, (mu * np.identity(self.n * self.h)))), g)
-            deltaw = deltaw.reshape(self.n, self.h)
-            self.hidden.weights = np.add(self.hidden.weights, deltaw)
+            # update input-hidden weights
+            self.update_hidden_weights(e1, e2, mu, Z1o, Z2o, len(T1), len(T2))
 
             # Reset stored sums and inputs
             self.output.ex_inputs = self.output.ex_sums = None
@@ -191,7 +187,74 @@ class MLP:
         if iters == max_iters:
             print("Did not converge")
 
-        return min_losses, xs, loss_values
+        return min_loss_and_weights, xs, loss_values
+
+    def update_hidden_weights(self, e1, e2, mu, Z1o, Z2o, N1, N2):
+        """
+        Perform a single update step of the input-hidden weights of the MLP
+        :param e1: error list on T1
+        :param e2: error list on T2
+        :param mu: current mu
+        :param Z1o: T1 Jacobian of output weights
+        :param Z2o: T2 Jacobian of output weights
+        :param N1: Length of T1
+        :param N2: Length of T2
+        :return:
+        """
+        # Compute jacobian for hidden-output weights
+        prev_inputs = self.output.ex_inputs
+        h2o_weights = self.output.weights.ravel()
+        prev_inputs_h = self.hidden.ex_inputs
+        prev_sums_h = self.hidden.ex_sums
+
+        Z1h = np.array(
+            [[i2h_deriv(prev_sums_h[x][h], prev_inputs_h[x][i], Z1o[x][h], h2o_weights[h], prev_inputs[x][h])
+              for i in range(self.n) for h in range(self.h)] for x in range(N1)])
+        Z2h = np.array([[i2h_deriv(prev_sums_h[i][h], prev_inputs_h[x][i], Z2o[x - N1][h], h2o_weights[h],
+                                   prev_inputs[x][h])
+                         for i in range(self.n) for h in range(self.h)] for x in range(N1, N1 + N2)])
+
+        # Compute hessian approximation
+        H = self.Hess(Z1h, Z2h)
+        # Compute gradient vector approximation
+        g = self.grad(Z1h, e1, Z2h, e2)
+
+        # Apply weight update
+        deltaw = np.dot(np.linalg.inv(np.add(H, (mu * np.identity(self.n * self.h)))), g)
+        deltaw = deltaw.reshape(self.n, self.h)
+        self.hidden.weights = np.add(self.hidden.weights, deltaw)
+
+    def update_output_weights(self, e1, e2, mu, N1, N2):
+        """
+        Perform a single update step of the hidden to output weights of the MLP
+        :param e1: error list on T1
+        :param e2: error list on T2
+        :param N1: Length of T1
+        :param N2: Length of T2
+        :param mu: current mu
+        :return:
+        """
+        # Convert weights from 2d array to 1d
+        prev_inputs = self.output.ex_inputs
+        prev_sums = self.output.ex_sums
+
+        # Compute jacobian for hidden-output weights
+        Z1o = np.array([[h2o_deriv(prev_sums[i][0], prev_inputs[i][j]) for j in range(self.h)]
+                        for i in range(N1)])
+        Z2o = np.array([[h2o_deriv(prev_sums[i][0], prev_inputs[i][j]) for j in range(self.h)]
+                        for i in range(N1, N1 + N2)])
+
+        # Compute hessian approximation
+        H = self.Hess(Z1o, Z2o)
+        # Compute gradient vector approximation
+        g = self.grad(Z1o, e1, Z2o, e2)
+
+        # Compute and apply weight update
+        deltaw = np.dot(np.linalg.inv(np.add(H, (mu * np.identity(self.h)))), g)
+        deltaw = deltaw.flatten('C')
+        self.output.weights = np.add(self.output.weights, deltaw)
+
+        return Z1o, Z2o
 
     def plot_decision_boundary(self):
         print("Plotting decision boundary")

@@ -99,8 +99,8 @@ def run():
 
         np.random.shuffle(T1)
         np.random.shuffle(T2)
-        train1 = T1[:int(7*len(T1)/8)]
-        test1 = T1[int(7*len(T1)/8):]
+        train1 = T1[:int(7 * len(T1) / 8)]
+        test1 = T1[int(7 * len(T1) / 8):]
         train2 = T2[:int(7 * len(T2) / 8)]
         test2 = T2[int(7 * len(T2) / 8):]
         test = np.append(test1, test2)
@@ -114,14 +114,14 @@ def run():
         else:
             xs, loss_values = mlp.train(train1, train2, repeat)
 
-            loss_values = np.array(loss_values).reshape(len(xs),)
+            loss_values = np.array(loss_values).reshape(len(xs), )
             plt.plot(xs, loss_values)
             plt.title(f"mu={mlp.mu}, beta={mlp.beta}")
             plt.show()
             np.save(f"weights/hiddenw_{file_base}", mlp.hidden.weights)
             np.save(f"weights/outputw_{file_base}", mlp.output.weights)
 
-        print("-"*50)
+        print("-" * 50)
         print(f"Accuracy for {h} hidden units")
         acc = eval_mlp(mlp, T, T1, T2)
         print_accs(acc)
@@ -132,8 +132,6 @@ def run():
             plt.title(f"{file_base} | {acc[0]:.3f}, {acc[1]:.3f}, {acc[2]:.3f}, {acc[3]:.3f},"
                       f"{acc[4]:.3f}, {acc[5]:.3f}")
             plt.show()
-
-
 
 
 if __name__ == '__main__':
