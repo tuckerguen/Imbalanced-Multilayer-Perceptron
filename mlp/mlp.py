@@ -6,7 +6,7 @@ from _heapq import heappush, heappop
 
 
 class MLP:
-    def __init__(self, n, h, _lambda, afcn, mu, beta):
+    def __init__(self, n, h, lambda_, afcn, mu, beta, repeat=False):
         """
         Creates a multilayer perceptron with a single hidden layer
         and one output node, using a weighted sum loss function
@@ -21,7 +21,8 @@ class MLP:
         self.beta = beta
         self.hidden = Layer(n, h, afcn)
         self.output = Layer(h, 1, afcn)
-        self._lambda = _lambda
+        self.lambda_ = lambda_
+        self.repeat = repeat
 
     def randomize_weights(self):
         self.hidden.randomize_weights()
@@ -45,7 +46,7 @@ class MLP:
         return np.subtract(y, np.array([self.predict(x) for x in T]))
 
     def weightsum(self, x1, x2):
-        return self._lambda * x1 + (1 - self._lambda) * x2
+        return self.lambda_ * x1 + (1 - self.lambda_) * x2
 
     def loss(self, e1, e2):
         return self.weightsum(np.dot(np.transpose(e1), e1), np.dot(np.transpose(e2), e2))
@@ -56,10 +57,9 @@ class MLP:
     def grad(self, Z1, e1, Z2, e2):
         return self.weightsum(np.dot(np.transpose(Z1), e1), np.dot(np.transpose(Z2), e2))
 
-    def train(self, T1, T2, repeat):
+    def train(self, T1, T2):
         """
         Train the MLP on training examples
-        :param repeat: Use repeating convergence method
         :param T1: List of positive examples
         :param T2: List of negative examples
         :return: list of x and loss values for plotting
@@ -69,10 +69,10 @@ class MLP:
 
         mins0, x0s, l0s = self.LM_optimize_weights(mu, beta, T1, T2)
 
-        if not repeat:
-            return x0s, l0s
-        else:
+        if self.repeat:
             return self.repeat_optimization(mins0, x0s, l0s, T1, T2)
+        else:
+            return x0s, l0s
 
     def repeat_optimization(self, mins0, x0s, l0s, T1, T2):
         """
@@ -96,7 +96,7 @@ class MLP:
 
         # Repeat optimization for minima
         for i, weights in enumerate(mins0):
-            print(f"Re-optimizing from loss at {weights[0][0][0]:.3f}")
+            print(f"Re-optimizing from loss at {-weights[0][0][0]:.3f}")
             self.hidden.weights = weights[1]
             self.output.weights = weights[2]
             mins, x1s, l1s = self.LM_optimize_weights(0.001, 3, T1, T2)
@@ -187,6 +187,7 @@ class MLP:
         if iters == max_iters:
             print("Did not converge")
 
+        print("Final loss=", Jnew)
         return min_loss_and_weights, xs, loss_values
 
     def update_hidden_weights(self, e1, e2, mu, Z1o, Z2o, N1, N2):
@@ -310,7 +311,7 @@ def eval_mlp(mlp, T, T1, T2):
     w_acc = weighted_acc(pred, act)
     gmean = np.sqrt(maj_acc * min_acc)
 
-    return np.array([maj_acc, min_acc, lambda_weight_acc, overall_acc, w_acc, gmean])
+    return [maj_acc, min_acc, lambda_weight_acc, overall_acc, w_acc, gmean]
 
 
 def print_accs(acc):

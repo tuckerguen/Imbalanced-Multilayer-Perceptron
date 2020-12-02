@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.random as rnd
 import matplotlib.pyplot as plt
+from data_help.exset_ops import get_data, map_nominal_attr
 
 
 def gen_data(N, num_attr, ratio):
@@ -29,7 +30,7 @@ def plot_dataset(dataset):
     markers = ['+' if lab > 0 else 'o' for lab in labels]
     colors = ['#1f77b4' if lab > 0 else '#ff7f0e' for lab in labels]
     for i in range(len(dataset)):
-        plt.scatter(dataset[i][0], dataset[i][1], c=colors[i], marker=markers[i])
+        plt.scatter(dataset[i][0], dataset[i][1], c=colors[i], marker=markers[i], s=1)
 
 
 def normalize(x):
@@ -44,7 +45,18 @@ def correct_labels(x):
             ex[-1] = 1
 
 
-def gen_Tk(T):
+def split_by_label(T):
     T1 = np.array([ex[1:-1] for ex in T if ex[-1] == -1])
     T2 = np.array([ex[1:-1] for ex in T if ex[-1] == 1])
     return T1, T2
+
+
+def dataset_load(name):
+    exset = get_data(f"/data/{name}/{name}")
+    map_nominal_attr(exset)
+    data = np.array(exset.examples)
+    correct_labels(data)
+    data = data.astype(np.float)
+    T = normalize(data)
+    correct_labels(T)
+    return T

@@ -1,5 +1,4 @@
 import numpy as np
-from mlp.neuron import Neuron
 
 
 class Layer:
@@ -26,6 +25,8 @@ class Layer:
 
     def randomize_weights(self):
         self.weights = np.random.normal(0.0, np.sqrt(2 / (self.n_in + self.n_out)), (self.n_in, self.n_out))
+        if self.weights.shape[1] == 1:
+            self.weights = self.weights.flatten('C')
 
     def feed_forward(self, inputs):
         """

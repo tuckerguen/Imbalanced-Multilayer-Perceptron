@@ -25,22 +25,24 @@ def run():
     load_data = bool(int(sys.argv[4]))
     comp_lambda = bool(int(sys.argv[5]))
     old_weights = bool(int(sys.argv[6]))
+    repeat = bool(int(sys.argv[7]))
 
+    # Load or generate dataset
     if load_data:
         T, T1, T2 = synth_load(N, ratio, num_attr)
     else:
         T, T1, T2 = synth_gen_and_save(N, ratio, num_attr)
 
-    if comp_lambda:
-        _lambda = len(T2) / len(T) / 2
-    else:
-        _lambda = 0.5
+    # Compute lambda
+    _lambda = len(T2) / len(T) / 2 if comp_lambda else 0.5
 
-    shape = T1.shape
+    # Create file string base
     file_base = make_file_str(N, ratio, num_attr, _lambda)
 
-    mlp = MLP(shape[1], 3, _lambda, np.tanh)
+    # Create classifier
+    mlp = MLP(T1.shape[1], 3, _lambda, np.tanh, 0.1, 10, repeat)
 
+    # Load old weights or train and save new weights
     if old_weights:
         mlp.hidden.weights = np.load(f"weights/hiddenw_{file_base}")
         mlp.output.weights = np.load(f"weights/outputw_{file_base}")
@@ -49,7 +51,15 @@ def run():
         np.save(f"weights/hiddenw_{file_base}", mlp.hidden.weights)
         np.save(f"weights/outputw_{file_base}", mlp.output.weights)
 
-    eval_mlp(mlp, T, T1, T2)
+    # Evaluate classifier
+    acc = eval_mlp(mlp, T, T1, T2)
+    print(acc)
+    # Plot decision boundary on dataset plot
+    mlp.plot_decision_boundary()
+    plot_dataset(T)
+    plt.title(f"{file_base} | {acc[0]:.3f}, {acc[1]:.3f}, {acc[2]:.3f}, {acc[3]:.3f},"
+              f"{acc[4]:.3f}, {acc[5]:.3f}")
+    plt.show()
 
 
 def make_file_str(N, ratio, num_attr, _lambda):
