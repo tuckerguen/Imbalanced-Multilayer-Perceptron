@@ -157,12 +157,15 @@ class MLP:
                 Jprev = Jnew
                 Jnew = self.loss(e1, e2)
                 # Report current loss
-                print(Jnew)
+                print(Jnew, end='\r')
 
                 # Track top 3 minimum losses visited
-                heappush(min_loss_and_weights, (-Jnew, self.hidden.weights, self.output.weights))
-                if len(min_loss_and_weights) > 3:
-                    heappop(min_loss_and_weights)
+                try:
+                    heappush(min_loss_and_weights, (-Jnew, self.hidden.weights, self.output.weights))
+                    if len(min_loss_and_weights) > 3:
+                        heappop(min_loss_and_weights)
+                except ValueError:
+                    print("Loss storage failed")
 
                 # If loss decreased
                 if Jnew < Jprev and Jnew != Jprev:

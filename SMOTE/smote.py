@@ -13,16 +13,17 @@ def kmeans_SMOTE(T, T2, p, k, n_clusters):
     for c in range(n_clusters):
         clusters.append([list(ex) for i, ex in enumerate(T2) if kmeans.labels_[i] == c])
 
-    T2o = []
+    synthetic = []
     # Apply smote to all clusters
     for cluster in clusters:
         addtl_samples = SMOTE(cluster, p, k)
-        T2o.extend(addtl_samples)
+        synthetic.extend(addtl_samples)
 
-    for ex in T2o:
-        ex.append(-1)
-    T2o = np.array(T2o)
-    return np.vstack((T, T2o)), T2o
+    return synthetic
+    # for ex in T2o:
+    #     ex.append(-1)
+    # T2o = np.array(T2o)
+    # return np.vstack((T, T2o)), T2o
 
 
 def SMOTE(T2, p, k, T1=None, BLL=False):
@@ -118,9 +119,7 @@ def sample_synth_BLL(T1, t, nearest, num_samples):
         new_sample = generate_sample(t, nearest, numattrs)
         dj = [dist(new_sample, n) for n in nearest]
         ddiff = knn.kneighbors([new_sample])[0][0][0]
-        print(ddiff)
         comp = [d <= ddiff for d in dj]
-        print(comp)
         if all(comp):
             # accept sample
             new_samples.append(new_sample)
@@ -157,7 +156,8 @@ def dist(p1, p2):
     :param p2: point 2
     :return: float euclidean distance
     """
-    return ((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2) ** .5
+    return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** .5
+
 
 def SMOTE_dataset(T, T2, p, k, T1=None, BLL=False):
     """

@@ -50,6 +50,11 @@ def split_by_label(T):
     T2 = np.array([ex[1:-1] for ex in T if ex[-1] == 1])
     return T1, T2
 
+def split_by_label_synth(T):
+    T1 = np.array([ex[:-1] for ex in T if ex[-1] == -1])
+    T2 = np.array([ex[:-1] for ex in T if ex[-1] == 1])
+    return T1, T2
+
 
 def dataset_load(name):
     exset = get_data(f"/data/{name}/{name}")

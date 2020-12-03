@@ -18,6 +18,19 @@ def synth_gen_and_save(N, ratio, num_attr):
     return T, T1, T2
 
 
+def train_and_plot(T, lambda_, title_base):
+    T1, T2 = split_by_label_synth(T)
+    # Create classifier
+    mlp = MLP(T1.shape[1], 3, lambda_, np.tanh, 0.1, 10)
+    mlp.train(T1, T2)
+    acc = eval_mlp(mlp, T, T1, T2)
+    print(acc)
+    mlp.plot_decision_boundary()
+    plot_dataset(T)
+    plt.title(f"{title_base} | {acc[0]:.3f}, {acc[1]:.3f}, {acc[2]:.3f}, {acc[3]:.3f},"
+              f"{acc[4]:.3f}, {acc[5]:.3f}")
+    plt.show()
+
 def run():
     N = int(sys.argv[1])
     ratio = int(sys.argv[2])
