@@ -22,7 +22,7 @@ def run():
 
     mu = 0.1
     beta = 10
-    h = 7
+    h = 18
 
     # Compute lambda
     _lambda = len(T2) / len(T) / 2 if comp_lambda else 0.5

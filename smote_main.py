@@ -27,17 +27,17 @@ def smote_validate_synth(T, T_smote, lambda_, title_base):
 
 def main():
     T, T1, T2 = gen_data(1000, 2, 19)
-    # np.save("smote_0_1900_NEW", T)
-    # plot_dataset(T)
-    # plt.show()
+    np.save("smote_0_1900_NEW", T)
+    plot_dataset(T)
+    plt.show()
     T_smotek, T2_smotek = kmeans_SMOTE(T, T2, 1900, 5, int(len(T2) / 15))
-    # np.save("smote_k_11pergroup_1900p_5nn_NEW", T_smotek)
+    np.save("smote_k_11pergroup_1900p_5nn_NEW", T_smotek)
     T_smote, T2_smote = SMOTE_dataset(T, T2, 1900, 5)
-    # np.save("smoke_normal_1900p_5nn_MEW", T_smote)
-    # plot_dataset(T_smotek)
-    # plt.show()
-    # plot_dataset(T_smote)
-    # plt.show()
+    np.save("smoke_normal_1900p_5nn_MEW", T_smote)
+    plot_dataset(T_smotek)
+    plt.show()
+    plot_dataset(T_smote)
+    plt.show()
 
 
 if __name__ == '__main__':
